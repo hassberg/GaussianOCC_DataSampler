@@ -8,14 +8,17 @@ train_fraction = 0.7
 eval_fraction = 0.3
 
 
-def create_sample(inlier_indices, outlier_indices, data_obj, output_path, sample_run, inlier_fraction=0.95, max_data: int = 500):
+def create_sample(inlier_indices, outlier_indices, data_obj, output_path, sample_run, creating_test: bool = False, inlier_fraction=0.95, max_data: int = 500):
     inlier_count = min(len(inlier_indices), max_data * inlier_fraction * 1 / train_fraction)
 
     train_inlier, test_inlier = train_test_split(inlier_indices, train_size=int(inlier_count * train_fraction))
 
     # TODO relevant? if not eval_creation_mode:
     train_outlier, remaining = train_test_split(outlier_indices, train_size=int(len(train_inlier) / inlier_fraction * (1 - inlier_fraction)))
-    test_outlier, _ = train_test_split(remaining, train_size=np.minimum(len(remaining) - 1, 400))
+    if creating_test:
+        test_outlier, _ = train_test_split(remaining, train_size=np.maximum(3, int(len(test_inlier) / inlier_fraction * (1 - inlier_fraction))))
+    else:
+        test_outlier, _ = train_test_split(remaining, train_size=np.minimum(len(remaining) - 1, 400))
 
     samples_train_indices = train_inlier + train_outlier
     samples_test_indices = test_inlier + test_outlier
@@ -31,7 +34,7 @@ def create_sample(inlier_indices, outlier_indices, data_obj, output_path, sample
     pd.DataFrame(samples_test).to_csv(os.path.join(final_folder, "test.csv"), index=False, header=False)
 
 
-def sample_files(source_name: str, target_folder: str = "samples", samples=5, coloumns_to_drop=[],
+def sample_files(source_name: str, target_folder: str, samples=5, coloumns_to_drop=[],
                  inlier_classes=[], whitespace_delim: bool = False):
     file = pd \
         .read_csv(os.path.join(os.path.dirname(__file__), "datasets", source_name), delim_whitespace=whitespace_delim, index_col=False) \
@@ -61,7 +64,7 @@ def sample_files(source_name: str, target_folder: str = "samples", samples=5, co
         os.makedirs(path)
 
     ## sample train
-    create_sample(inlier_indices=inlier, outlier_indices=outlier, sample_run="eval", data_obj=obj, output_path=path)
+    create_sample(inlier_indices=inlier, outlier_indices=outlier, sample_run="test", creating_test=True, data_obj=obj, output_path=path)
     for i in range(samples):
         ## sample tests
         create_sample(inlier_indices=inlier, outlier_indices=outlier, sample_run="sample_" + str(i), data_obj=obj, output_path=path)
@@ -97,6 +100,6 @@ datasets = [
 ]
 
 for dataset in datasets:
-    sample_files(dataset[0], target_folder=os.path.join("samples", dataset[0].split(".")[0]),
+    sample_files(dataset[0], target_folder="samples/discrete",
                  whitespace_delim=dataset[1], samples=10,
                  coloumns_to_drop=dataset[2], inlier_classes=dataset[3])
