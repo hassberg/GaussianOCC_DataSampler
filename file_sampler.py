@@ -3,6 +3,7 @@ import os
 import numpy as np
 import pandas as pd
 from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import scale
 
 train_fraction = 0.7
 eval_fraction = 0.3
@@ -13,7 +14,6 @@ def create_sample(inlier_indices, outlier_indices, data_obj, output_path, sample
 
     train_inlier, test_inlier = train_test_split(inlier_indices, train_size=int(inlier_count * train_fraction))
 
-    # TODO relevant? if not eval_creation_mode:
     train_outlier, remaining = train_test_split(outlier_indices, train_size=int(len(train_inlier) / inlier_fraction * (1 - inlier_fraction)))
     if creating_test:
         test_outlier, _ = train_test_split(remaining, train_size=np.maximum(3, int(len(test_inlier) / inlier_fraction * (1 - inlier_fraction))))
@@ -44,6 +44,9 @@ def sample_files(source_name: str, target_folder: str, sampling_strategy: str, s
     file['class'] = file['class'].map(lambda x: 1 if x in inlier_classes else -1)
 
     obj = file.sort_values(by='class').values
+    # normalize..
+    scaled = scale(obj[:, :-1])
+    obj = np.hstack((scaled, [[i] for i in obj[:, -1]]))
     labels, counts = np.unique(obj[:, -1], return_counts=True)
 
     inlier = []
@@ -78,22 +81,23 @@ def sample_files(source_name: str, target_folder: str, sampling_strategy: str, s
 
 # list meanings: str-file name, bool - whitespace_delim, list - drop columns, list - inlier classes - sampling_type
 datasets = [
-    # ["breast-cancer-wisconsin.data", False, ["code"], [2], "discrete", ],
+    ["breast-cancer-wisconsin.data", False, ["code"], [2], "discrete", ],
     # ["breast-cancer-wisconsin.data", False, ["code"], [4], "discrete", ],
-    ["ecoli.data", True, ["sample_machine"], ["cp"], "discrete", ],
+    # ["ecoli.data", True, ["sample_machine"], ["cp"], "discrete", ],
     # ["ecoli.data", True, ["sample_machine"], ["im"], "discrete", ],
-    # ["glass.data", False, ["index"], [1, 2, 3, 4], "discrete", ],
+    ["glass.data", False, ["index"], [1, 2, 3, 4], "discrete", ],
     # ["glass.data", False, ["index"], [2], "discrete", ],
     # ["ionosphere.data", False, [], ["g"], "discrete", ],
     # ["ionosphere.data", False, [], ["b"], "discrete", ],
-    # ["lymphography.data", False, [], [2], "discrete", ],
+    ["lymphography.data", False, [], [2], "discrete", ],
     # ["lymphography.data", False, [], [3], "discrete", ],
-    # ["page-blocks.data", True, [], [1], "discrete", ],
+    ["page-blocks.data", True, [], [1], "continuous", ],
     # ["page-blocks.data", True, [], [2], "discrete", ],
     # ["svmguide1.csv", False, [], [1], "discrete", ],
-    ["svmguide1.csv", False, [], [1], "continuous", ],
+    # ["svmguide1.csv", False, [], [1], "continuous", ],
     # ["svmguide1.csv", False, [], [1], "discrete", ],
-    # ["waveform.data", False, [], [0], "discrete", ],
+    ["waveform.data", False, [], [0], "discrete", ],
+    ["waveform.data", False, [], [0], "continuous", ],
     # ["waveform.data", False, [], [1], "discrete", ],
     # ["waveform.data", False, [], [2], "discrete", ],
     # ["wdbc.data", False, ["ID"], ["B"], "discrete", ],
