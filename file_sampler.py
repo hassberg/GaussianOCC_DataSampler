@@ -9,14 +9,14 @@ train_fraction = 0.7
 eval_fraction = 0.3
 
 
-def create_sample(inlier_indices, outlier_indices, data_obj, output_path, sample_run, creating_test: bool = False, inlier_fraction=0.95, max_data: int = 500):
+def create_sample(inlier_indices, outlier_indices, data_obj, output_path, sample_run, creating_for_gridsearch: bool = False, inlier_fraction=0.95, max_data: int = 500):
     inlier_count = min(len(inlier_indices), max_data * inlier_fraction * 1 / train_fraction)
 
     train_inlier, test_inlier = train_test_split(inlier_indices, train_size=int(inlier_count * train_fraction))
 
     train_outlier, remaining = train_test_split(outlier_indices, train_size=int(len(train_inlier) / inlier_fraction * (1 - inlier_fraction)))
-    if creating_test:
-        test_outlier, _ = train_test_split(remaining, train_size=np.maximum(3, int(len(test_inlier) / inlier_fraction * (1 - inlier_fraction))))
+    if creating_for_gridsearch:
+        test_outlier, _ = train_test_split(remaining, train_size=np.minimum(len(remaining) - 1, np.maximum(500, int(len(test_inlier) / inlier_fraction * (1 - inlier_fraction)))))
     else:
         test_outlier, _ = train_test_split(remaining, train_size=np.minimum(len(remaining) - 1, 400))
 
@@ -73,7 +73,7 @@ def sample_files(source_name: str, target_folder: str, sampling_strategy: str, s
         pd.DataFrame(obj).to_csv(os.path.join(gt_path, "ground_truth.csv"), index=False, header=False)
 
     ## sample train
-    create_sample(inlier_indices=inlier, outlier_indices=outlier, sample_run="test", creating_test=True, data_obj=obj, output_path=path)
+    create_sample(inlier_indices=inlier, outlier_indices=outlier, sample_run="grid", creating_for_gridsearch=True, data_obj=obj, output_path=path)
     for i in range(samples):
         ## sample tests
         create_sample(inlier_indices=inlier, outlier_indices=outlier, sample_run="sample_" + str(i), data_obj=obj, output_path=path)
